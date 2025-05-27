@@ -1,5 +1,5 @@
 ---
-title: Chatterbox TTS
+title: Chatterbox CFG
 emoji: 🍿
 colorFrom: indigo
 colorTo: blue
