@@ -1,14 +1,13 @@
 ---
-title: Chatterbox CFG
-emoji: ⚡
-colorFrom: red
+title: Chatterbox TTS
+emoji: 🍿
+colorFrom: indigo
 colorTo: blue
 sdk: gradio
-sdk_version: 5.31.0
+sdk_version: 5.29.0
 app_file: app.py
 pinned: false
-license: mit
-short_description: SoTA Open-source TTS Model.
+short_description: Expressive Zeroshot TTS
 ---
 
 Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
