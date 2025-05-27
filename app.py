@@ -17,7 +17,7 @@ def set_seed(seed: int):
 
 model = ChatterboxTTS.from_pretrained(DEVICE)
 
-def generate(text, audio_prompt_path, exaggeration, pace, temperature, seed_num):
+def generate(text, audio_prompt_path, exaggeration, pace, temperature, seed_num, cfg_weight):
     if seed_num != 0:
         set_seed(int(seed_num))
 
@@ -27,6 +27,7 @@ def generate(text, audio_prompt_path, exaggeration, pace, temperature, seed_num)
         exaggeration=exaggeration,
         pace=pace,
         temperature=temperature,
+        cfg_weight=cfg_weight,
     )
     return model.sr, wav.squeeze(0).numpy()
 
@@ -36,7 +37,9 @@ with gr.Blocks() as demo:
         with gr.Column():
             text = gr.Textbox(value="What does the fox say?", label="Text to synthesize")
             ref_wav = gr.Audio(sources="upload", type="filepath", label="Reference Audio File", value=None)
-            exaggeration = gr.Slider(0.25, 2, step=.05, label="exaggeration", value=.7)
+            exaggeration = gr.Slider(0.25, 2, step=.05, label="Exaggeration (Neutral = 0.5, extreme values can be unstable)", value=.5)
+            cfg_weight = gr.Slider(0.0, 5, step=.05, label="CFG/Pace", value=1.0)
+
 
             with gr.Accordion("More options", open=False):
                 seed_num = gr.Number(value=0, label="Random seed (0 for random)")
@@ -57,6 +60,7 @@ with gr.Blocks() as demo:
             pace,
             temp,
             seed_num,
+            cfg_weight,
         ],
         outputs=audio_output,
     )
