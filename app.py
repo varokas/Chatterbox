@@ -62,7 +62,7 @@ def generate_tts_audio(text_input, audio_prompt_path_input, exaggeration_input, 
 
     print(f"Generating audio for text: '{text_input}'")
     wav = current_model.generate(
-        text_input,
+        text_input[:300],
         audio_prompt_path=audio_prompt_path_input,
         exaggeration=exaggeration_input,
         temperature=temperature_input,
@@ -79,7 +79,7 @@ with gr.Blocks() as demo:
 
     with gr.Row():
         with gr.Column():
-            text = gr.Textbox(value="Now let's make my mum's favourite. So three mars bars into the pan. Then we add the tuna and just stir for a bit, just let the chocolate and fish infuse. A sprinkle of olive oil and some tomato ketchup. Now smell that. Oh boy this is going to be incredible.", label="Text to synthesize")
+            text = gr.Textbox(value="Now let's make my mum's favourite. So three mars bars into the pan. Then we add the tuna and just stir for a bit, just let the chocolate and fish infuse. A sprinkle of olive oil and some tomato ketchup. Now smell that. Oh boy this is going to be incredible.", label="Text to synthesize (max chars 300)")
             ref_wav = gr.Audio(sources=["upload", "microphone"], type="filepath", label="Reference Audio File", value="https://storage.googleapis.com/chatterbox-demo-samples/prompts/female_shadowheart.flac")
             exaggeration = gr.Slider(0.25, 2, step=.05, label="Exaggeration (Neutral = 0.5, extreme values can be unstable)", value=.5)
             cfg_weight = gr.Slider(0.2, 1, step=.05, label="CFG/Pace", value=0.5)
