@@ -72,5 +72,8 @@ with gr.Blocks() as demo:
         outputs=[model_state, audio_output],
     )
 
-if __name__ == "__main__":
-    demo.queue().launch()
+demo.queue(
+        max_size=50,
+        default_concurrency_limit=1,
+    ).launch(share=True) 
+
