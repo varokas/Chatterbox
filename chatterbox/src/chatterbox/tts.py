@@ -6,7 +6,6 @@ import torch
 import perth
 import torch.nn.functional as F
 from huggingface_hub import hf_hub_download
-from silero_vad import load_silero_vad, get_speech_timestamps
 
 from .models.t3 import T3
 from .models.s3tokenizer import S3_SR, drop_invalid_tokens
@@ -14,21 +13,9 @@ from .models.s3gen import S3GEN_SR, S3Gen
 from .models.tokenizers import EnTokenizer
 from .models.voice_encoder import VoiceEncoder
 from .models.t3.modules.cond_enc import T3Cond
-from .utils import trim_silence
 
 
 REPO_ID = "ResembleAI/chatterbox"
-
-
-def change_pace(speech_tokens: torch.Tensor, pace: float):
-    """
-    :param speech_tokens: Tensor of shape (L,)
-    :param pace: float, pace (default: 1)
-    """
-    L = len(speech_tokens)
-    speech_tokens = F.interpolate(speech_tokens.view(1, 1, -1).float(), size=int(L / pace), mode="nearest")
-    speech_tokens = speech_tokens.view(-1).long()
-    return speech_tokens
 
 
 def punc_norm(text: str) -> str:
@@ -134,7 +121,6 @@ class ChatterboxTTS:
         self.device = device
         self.conds = conds
         self.watermarker = perth.PerthImplicitWatermarker()
-        self.vad_model = load_silero_vad()
 
     @classmethod
     def from_local(cls, ckpt_dir, device) -> 'ChatterboxTTS':
@@ -182,19 +168,6 @@ class ChatterboxTTS:
 
         ref_16k_wav = librosa.resample(s3gen_ref_wav, orig_sr=S3GEN_SR, target_sr=S3_SR)
 
-        vad_wav = ref_16k_wav
-        if S3_SR != 16000:
-            vad_wav = librosa.resample(ref_16k_wav, orig_sr=S3_SR, target_sr=16000)
-
-        speech_timestamps = get_speech_timestamps(
-            vad_wav,
-            self.vad_model,
-            return_seconds=True,
-        )
-
-        # s3gen_ref_wav = trim_silence(s3gen_ref_wav, speech_timestamps, S3GEN_SR)
-        # ref_16k_wav = trim_silence(ref_16k_wav, speech_timestamps, S3_SR)
-
         s3gen_ref_wav = s3gen_ref_wav[:self.DEC_COND_LEN]
         s3gen_ref_dict = self.s3gen.embed_ref(s3gen_ref_wav, S3GEN_SR, device=self.device)
 
@@ -220,8 +193,7 @@ class ChatterboxTTS:
         text,
         audio_prompt_path=None,
         exaggeration=0.5,
-        cfg_weight=0,
-        pace=1,
+        cfg_weight=0.5,
         temperature=0.8,
     ):
         if audio_prompt_path:
@@ -262,8 +234,6 @@ class ChatterboxTTS:
             # TODO: output becomes 1D
             speech_tokens = drop_invalid_tokens(speech_tokens)
             speech_tokens = speech_tokens.to(self.device)
-
-            speech_tokens = change_pace(speech_tokens, pace=pace)
 
             wav, _ = self.s3gen.inference(
                 speech_tokens=speech_tokens,
