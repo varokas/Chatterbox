@@ -1,90 +1,94 @@
 import random
 import numpy as np
 import torch
-from chatterbox.src.chatterbox.tts import ChatterboxTTS
+from chatterbox.src.chatterbox.tts import ChatterboxTTS # Assuming this path is correct
 import gradio as gr
-import spaces # <<< IMPORT THIS
+import spaces
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"🚀 Running on device: {DEVICE}") # Good to log this
+print(f"🚀 Running on device: {DEVICE}")
 
-# Global model variable to load only once if not using gr.State for model object
-# global_model = None
+# --- Global Model Initialization ---
+# Load the model once when the application starts.
+# This model will be accessible by the @spaces.GPU decorated function.
+MODEL = None
+
+def get_or_load_model():
+    global MODEL
+    if MODEL is None:
+        print("Global MODEL is None, loading...")
+        try:
+            MODEL = ChatterboxTTS.from_pretrained(DEVICE)
+            # Ensure model is on the correct device if not handled by from_pretrained
+            if DEVICE == "cuda" and hasattr(MODEL, 'to'):
+                MODEL.to(DEVICE)
+            print(f"Global MODEL loaded. Device: {DEVICE}")
+            if hasattr(MODEL, 'device'): # If the model object has a device attribute
+                 print(f"Model internal device attribute: {MODEL.device}")
+        except Exception as e:
+            print(f"Error loading global model: {e}")
+            raise
+    return MODEL
+
+# Attempt to load the model at startup.
+# If this fails, the app will likely fail to start, which is informative.
+try:
+    get_or_load_model()
+except Exception as e:
+    # Handle critical model loading failure if necessary, or let it propagate
+    print(f"CRITICAL: Failed to load model on startup. Error: {e}")
+    # You might want to display an error in Gradio if this happens,
+    # but for now, a print is fine for debugging.
 
 def set_seed(seed: int):
     torch.manual_seed(seed)
-    if DEVICE == "cuda": # Only seed cuda if available
+    if DEVICE == "cuda":
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
     random.seed(seed)
     np.random.seed(seed)
 
-# Optional: Decorate model loading if it's done on first use within a GPU function
-# However, it's often better to load the model once globally or manage with gr.State
-# and ensure the function CALLING the model is decorated.
+@spaces.GPU # Your GPU-accelerated function
+def generate_tts_audio(text_input, audio_prompt_path_input, exaggeration_input, pace_input, temperature_input, seed_num_input, cfgw_input):
+    current_model = get_or_load_model() # Access the global model
 
-@spaces.GPU # <<< ADD THIS DECORATOR
-def generate(model_obj, text, audio_prompt_path, exaggeration, temperature, seed_num, cfgw):
-    # It's better to load the model once, perhaps when the gr.State is initialized
-    # or globally, rather than checking `model_obj is None` on every call.
-    # For ZeroGPU, the decorated function handles the GPU context.
-    # Let's assume model_obj is passed correctly and is already on DEVICE
-    # or will be moved to DEVICE by ChatterboxTTS internally.
+    if current_model is None:
+        # This should ideally not happen if startup loading was successful
+        # Or, it indicates an issue with the global model pattern in this specific env.
+        raise RuntimeError("Model could not be loaded or accessed.")
 
-    if model_obj is None:
-        print("Model is None, attempting to load...")
-        # This load should ideally happen on DEVICE and be efficient.
-        # If ChatterboxTTS.from_pretrained(DEVICE) is slow,
-        # this will happen inside the GPU-allocated time.
-        model_obj = ChatterboxTTS.from_pretrained(DEVICE)
-        print(f"Model loaded on device: {model_obj.device if hasattr(model_obj, 'device') else 'unknown'}")
+    if seed_num_input != 0:
+        set_seed(int(seed_num_input))
 
-
-    if seed_num != 0:
-        set_seed(int(seed_num))
-
-    print(f"Generating audio for text: '{text}' on device: {DEVICE}")
-    wav = model_obj.generate(
-        text,
-        audio_prompt_path=audio_prompt_path,
-        exaggeration=exaggeration,
-        temperature=temperature,
-        cfg_weight=cfgw,
+    print(f"Generating audio for text: '{text_input}'")
+    wav = current_model.generate(
+        text_input,
+        audio_prompt_path=audio_prompt_path_input,
+        exaggeration=exaggeration_input,
+        pace=pace_input,
+        temperature=temperature_input,
+        cfg_weight=cfgw_input,
     )
     print("Audio generation complete.")
-    # The model state is passed back out, which is correct for gr.State
-    return (model_obj, (model_obj.sr, wav.squeeze(0).numpy()))
+    # ONLY return pickleable data
+    return (current_model.sr, wav.squeeze(0).numpy())
 
 
 with gr.Blocks() as demo:
-    # To ensure model loads on app start and uses DEVICE correctly:
-    # Pre-load the model here if you want it loaded once globally for the Space instance.
-    # However, with gr.State(None) and loading in `generate`,
-    # the first user hitting "Generate" will trigger the load.
-    # This is fine if `ChatterboxTTS.from_pretrained(DEVICE)` correctly uses the GPU
-    # within the @spaces.GPU decorated `generate` function.
-
-    # For better clarity on model loading with ZeroGPU:
-    # Consider a dedicated function for loading the model that's called to initialize gr.State,
-    # or ensure the first call to `generate` handles it robustly within the GPU context.
-    # The current approach of loading if model_state is None within `generate` is okay
-    # as long as `generate` itself is decorated.
-
-    model_state = gr.State(None)
+    # No gr.State needed for the model object if it's managed globally
+    # and not passed back and forth.
 
     with gr.Row():
-        # ... (rest of your UI code is fine) ...
         with gr.Column():
             text = gr.Textbox(value="What does the fox say?", label="Text to synthesize")
             ref_wav = gr.Audio(sources=["upload", "microphone"], type="filepath", label="Reference Audio File", value="https://storage.googleapis.com/chatterbox-demo-samples/prompts/wav7604828.wav")
             exaggeration = gr.Slider(0.25, 2, step=.05, label="Exaggeration (Neutral = 0.5, extreme values can be unstable)", value=.5)
             cfg_weight = gr.Slider(0.2, 1, step=.05, label="CFG/Pace", value=0.5)
 
-
             with gr.Accordion("More options", open=False):
                 seed_num = gr.Number(value=0, label="Random seed (0 for random)")
                 temp = gr.Slider(0.05, 5, step=.05, label="temperature", value=.8)
-
+                pace = gr.Slider(0.8, 1.2, step=.01, label="pace", value=1)
 
             run_btn = gr.Button("Generate", variant="primary")
 
@@ -92,22 +96,21 @@ with gr.Blocks() as demo:
             audio_output = gr.Audio(label="Output Audio")
 
     run_btn.click(
-        fn=generate,
+        fn=generate_tts_audio, # Use the new function name
         inputs=[
-            model_state,
+            # model_state, # Removed: model is now global
             text,
             ref_wav,
             exaggeration,
+            pace,
             temp,
             seed_num,
             cfg_weight,
         ],
-        outputs=[model_state, audio_output],
+        outputs=[audio_output], # Only outputting the audio data
     )
 
-# The share=True in launch() will give a UserWarning on Spaces, it's not needed.
-# Hugging Face Spaces provides the public link automatically.
 demo.queue(
-        max_size=50,
-        default_concurrency_limit=1, # Good for single model instance on GPU
-    ).launch() # Removed share=True
+    max_size=50,
+    default_concurrency_limit=1, # Important for a single global model
+).launch() # share=True is not needed and causes a warning on Spaces
