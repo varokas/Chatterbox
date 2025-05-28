@@ -49,7 +49,7 @@ def set_seed(seed: int):
     np.random.seed(seed)
 
 @spaces.GPU # Your GPU-accelerated function
-def generate_tts_audio(text_input, audio_prompt_path_input, exaggeration_input, pace_input, temperature_input, seed_num_input, cfgw_input):
+def generate_tts_audio(text_input, audio_prompt_path_input, exaggeration_input, temperature_input, seed_num_input, cfgw_input):
     current_model = get_or_load_model() # Access the global model
 
     if current_model is None:
@@ -65,7 +65,6 @@ def generate_tts_audio(text_input, audio_prompt_path_input, exaggeration_input, 
         text_input,
         audio_prompt_path=audio_prompt_path_input,
         exaggeration=exaggeration_input,
-        pace=pace_input,
         temperature=temperature_input,
         cfg_weight=cfgw_input,
     )
@@ -88,7 +87,7 @@ with gr.Blocks() as demo:
             with gr.Accordion("More options", open=False):
                 seed_num = gr.Number(value=0, label="Random seed (0 for random)")
                 temp = gr.Slider(0.05, 5, step=.05, label="temperature", value=.8)
-                pace = gr.Slider(0.8, 1.2, step=.01, label="pace", value=1)
+
 
             run_btn = gr.Button("Generate", variant="primary")
 
@@ -102,7 +101,6 @@ with gr.Blocks() as demo:
             text,
             ref_wav,
             exaggeration,
-            pace,
             temp,
             seed_num,
             cfg_weight,
