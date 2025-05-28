@@ -15,9 +15,13 @@ def set_seed(seed: int):
     np.random.seed(seed)
 
 
-model = ChatterboxTTS.from_pretrained(DEVICE)
+def load_model():
+    return ChatterboxTTS.from_pretrained(DEVICE)
 
-def generate(text, audio_prompt_path, exaggeration, pace, temperature, seed_num, cfg_weight):
+def generate(model, text, audio_prompt_path, exaggeration, pace, temperature, seed_num, cfgw):
+    if model is None:
+        model = ChatterboxTTS.from_pretrained(DEVICE)
+
     if seed_num != 0:
         set_seed(int(seed_num))
 
@@ -27,12 +31,14 @@ def generate(text, audio_prompt_path, exaggeration, pace, temperature, seed_num,
         exaggeration=exaggeration,
         pace=pace,
         temperature=temperature,
-        cfg_weight=cfg_weight,
+        cfg_weight=cfgw,
     )
-    return model.sr, wav.squeeze(0).numpy()
+    return (model, (model.sr, wav.squeeze(0).numpy()))
 
 
 with gr.Blocks() as demo:
+    model_state = gr.State(None)  # Loaded once per session/user
+
     with gr.Row():
         with gr.Column():
             text = gr.Textbox(value="What does the fox say?", label="Text to synthesize")
@@ -54,6 +60,7 @@ with gr.Blocks() as demo:
     run_btn.click(
         fn=generate,
         inputs=[
+            model_state,
             text,
             ref_wav,
             exaggeration,
@@ -62,9 +69,8 @@ with gr.Blocks() as demo:
             seed_num,
             cfg_weight,
         ],
-        outputs=audio_output,
+        outputs=[model_state, audio_output],
     )
 
 if __name__ == "__main__":
-    demo.queue()
-    demo.launch()
+    demo.queue().launch()
