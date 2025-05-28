@@ -24,7 +24,7 @@ def set_seed(seed: int):
 # and ensure the function CALLING the model is decorated.
 
 @spaces.GPU # <<< ADD THIS DECORATOR
-def generate(model_obj, text, audio_prompt_path, exaggeration, pace, temperature, seed_num, cfgw):
+def generate(model_obj, text, audio_prompt_path, exaggeration, temperature, seed_num, cfgw):
     # It's better to load the model once, perhaps when the gr.State is initialized
     # or globally, rather than checking `model_obj is None` on every call.
     # For ZeroGPU, the decorated function handles the GPU context.
@@ -48,7 +48,6 @@ def generate(model_obj, text, audio_prompt_path, exaggeration, pace, temperature
         text,
         audio_prompt_path=audio_prompt_path,
         exaggeration=exaggeration,
-        pace=pace,
         temperature=temperature,
         cfg_weight=cfgw,
     )
@@ -85,7 +84,7 @@ with gr.Blocks() as demo:
             with gr.Accordion("More options", open=False):
                 seed_num = gr.Number(value=0, label="Random seed (0 for random)")
                 temp = gr.Slider(0.05, 5, step=.05, label="temperature", value=.8)
-                pace = gr.Slider(0.8, 1.2, step=.01, label="pace", value=1)
+
 
             run_btn = gr.Button("Generate", variant="primary")
 
@@ -99,7 +98,6 @@ with gr.Blocks() as demo:
             text,
             ref_wav,
             exaggeration,
-            pace,
             temp,
             seed_num,
             cfg_weight,
