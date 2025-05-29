@@ -102,7 +102,7 @@ with gr.Blocks() as demo:
                 sources=["upload", "microphone"],
                 type="filepath",
                 label="Reference Audio File (Optional)",
-                value="https://storage.googleapis.com/chatterbox-demo-samples/prompts/female_shadowheart.flac"
+                value="https://storage.googleapis.com/chatterbox-demo-samples/prompts/female_shadowheart4.flac"
             )
             exaggeration = gr.Slider(
                 0.25, 2, step=.05, label="Exaggeration (Neutral = 0.5, extreme values can be unstable)", value=.5
