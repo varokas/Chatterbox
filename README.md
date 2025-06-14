@@ -26,17 +26,19 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 Once `uv` is installed, follow these steps:
 
-1.  Create a virtual environment with Python 3.10 and activate it:
-    ```bash
+Create a virtual environment with Python 3.10 and activate it:
+```bash
 uv venv --python 3.10
 source .venv/bin/activate
 ```
-2.  Install the project dependencies:
-    ```bash
+
+Install the project dependencies:
+```bash
 uv pip install -r requirements.txt
 ```
-3.  Run the application:
-    ```bash
+
+Run the application:
+```bash
 uv run app.py
 ```
 
