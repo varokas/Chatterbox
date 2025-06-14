@@ -1,5 +1,5 @@
 gradio
-numpy==1.26.0
+numpy==1.26.4
 resampy==0.4.3
 librosa==0.10.0
 s3tokenizer
