@@ -5,7 +5,7 @@ from chatterbox.src.chatterbox.tts import ChatterboxTTS
 import gradio as gr
 import spaces
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+DEVICE = "mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu")
 print(f"🚀 Running on device: {DEVICE}")
 
 # --- Global Model Initialization ---
@@ -39,6 +39,8 @@ def set_seed(seed: int):
     if DEVICE == "cuda":
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
+    elif DEVICE == "mps":
+        torch.mps.manual_seed(seed)
     random.seed(seed)
     np.random.seed(seed)
 
