@@ -29,7 +29,6 @@ Once `uv` is installed, follow these steps:
 Create a virtual environment with Python 3.10 and activate it:
 ```bash
 uv venv --python 3.10
-source .venv/bin/activate
 ```
 
 Install the project dependencies:
